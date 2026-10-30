@@ -41,17 +41,15 @@ func main() {
 	router := gin.Default()
 	router.Use(cors.Default())
 
-	router.GET("/auth/login", auth.HandleLogin)
+	router.GET("/auth/login", func(c *gin.Context) {
+		c.Request.URL.RawQuery = "referer=/auth/oauth2"
+		auth.HandleLogin(c)
+	})
+
 	router.GET("/auth/callback", auth.HandleCallback)
 	router.GET("/auth/logout", auth.HandleLogout)
 
-	cookieAuth := auth.CookieMiddleware()
-	router.Use(func(c *gin.Context) {
-		cookieAuth(c)
-		if c.Writer.Written() || (c.Writer.Status() >= 300 && c.Writer.Status() < 400) {
-			c.Abort()
-		}
-	})
+	router.Use(auth.CookieMiddleware())
 
 	router.NoRoute(func(ctx *gin.Context) {
 		proxy.ServeHTTP(ctx.Writer, ctx.Request)
