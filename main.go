@@ -45,7 +45,13 @@ func main() {
 	router.GET("/auth/callback", auth.HandleCallback)
 	router.GET("/auth/logout", auth.HandleLogout)
 
-	router.Use(auth.CookieMiddleware())
+	cookieAuth := auth.CookieMiddleware()
+	router.Use(func(c *gin.Context) {
+		cookieAuth(c)
+		if c.Writer.Written() || (c.Writer.Status() >= 300 && c.Writer.Status() < 400) {
+			c.Abort()
+		}
+	})
 
 	router.NoRoute(func(ctx *gin.Context) {
 		proxy.ServeHTTP(ctx.Writer, ctx.Request)
