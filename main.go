@@ -22,6 +22,7 @@ func main() {
 		Rewrite: func(r *httputil.ProxyRequest) {
 			r.SetURL(target)
 			r.SetXForwarded()
+			r.Out.Header.Set("X-Forwarded-Proto", "https")
 		},
 	}
 
