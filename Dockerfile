@@ -4,7 +4,6 @@ WORKDIR /app
 
 COPY go.* .
 RUN go mod download
-COPY internal internal
 
 COPY *.go .
 
