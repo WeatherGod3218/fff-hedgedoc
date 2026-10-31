@@ -18,12 +18,22 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const COOKIE_ORIGINAL_REFERENCE = "original_reference"
+
 var old = []byte(`<ul class="nav masthead-nav">`)
+
 var inject = []byte(`
 <ul class="nav masthead-nav"> 
 <li class="ui-home">
 	<a href="/csh/notes">CSH</a> 
 </li>`)
+
+func isSafePath(p string) bool { //had AI look over for bugs and it recommended this? alr
+	return strings.HasPrefix(p, "/") &&
+		!strings.HasPrefix(p, "//") &&
+		!strings.HasPrefix(p, "/\\") &&
+		!strings.HasPrefix(p, "/auth/")
+}
 
 func main() {
 	hedgedocURI := os.Getenv("HEDGEDOC_SERVICE_URI")
@@ -42,6 +52,14 @@ func main() {
 			}
 			r.Out.Header.Set("X-Forwarded-Proto", scheme)
 			r.Out.Header.Set("Accept-Encoding", "identity")
+
+			if r.In.URL.Path == "/auth/oauth2" || r.In.URL.Path == "/auth/oauth2/" {
+				if cookie, err := r.In.Cookie(COOKIE_ORIGINAL_REFERENCE); err == nil {
+					if dest, err := url.QueryUnescape(cookie.Value); err == nil && isSafePath(dest) {
+						r.Out.Header.Set("Referer", os.Getenv("SERVER_HOST")+dest)
+					}
+				}
+			}
 		},
 
 		ModifyResponse: func(resp *http.Response) error {
@@ -81,11 +99,14 @@ func main() {
 	router.LoadHTMLGlob("templates/*")
 	router.Use(cors.Default())
 
-	router.GET("/auth/login", func(c *gin.Context) {
-		originalRef := c.Request.URL.RawQuery
-		c.Request.URL.RawQuery = "referer=/auth/oauth2/"
-		c.Request.Header.Set("Referer", os.Getenv("SERVER_HOST")+originalRef)
-		auth.HandleLogin(c)
+	secureCookie := strings.HasPrefix(os.Getenv("SERVER_HOST"), "https://")
+
+	router.GET("/auth/login", func(ctx *gin.Context) {
+		if dest := ctx.Request.URL.Query().Get("referer"); isSafePath(dest) {
+			ctx.SetCookie(COOKIE_ORIGINAL_REFERENCE, dest, 400, "/", "", secureCookie, true)
+		}
+		ctx.Request.URL.RawQuery = "referer=/auth/oauth2"
+		auth.HandleLogin(ctx)
 	})
 
 	router.GET("/auth/callback", auth.HandleCallback)
@@ -104,6 +125,10 @@ func main() {
 				"User": user.Username,
 			})
 			return
+		}
+
+		if ctx.Request.URL.Path == "/auth/oauth2/callback" {
+			ctx.SetCookie(COOKIE_ORIGINAL_REFERENCE, "", -1, "/", "", secureCookie, true)
 		}
 
 		proxy.ServeHTTP(ctx.Writer, ctx.Request)
