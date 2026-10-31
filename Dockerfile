@@ -6,6 +6,7 @@ COPY go.* .
 RUN go mod download
 
 COPY *.go .
+COPY internal internal
 
 RUN go build -o server .
 
@@ -13,6 +14,7 @@ FROM alpine:latest
 
 WORKDIR /app
 COPY --from=gobuilder /app/server .
+COPY templates templates
 
 EXPOSE 8080
 
