@@ -1,4 +1,6 @@
+
 #env files
 
+.env.air
 .env.hedgedoc
 .env.proxy

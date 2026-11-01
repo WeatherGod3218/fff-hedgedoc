@@ -1,21 +1,33 @@
 package main
 
 import (
+	"fff-hedgedoc/internal/database"
 	"fff-hedgedoc/internal/logging"
 	"fff-hedgedoc/internal/proxy"
+	"fff-hedgedoc/internal/redis"
+	"fff-hedgedoc/internal/routes"
 	"fff-hedgedoc/internal/users"
 	"net/http"
 	"os"
 	"strings"
 
 	csh_auth "github.com/computersciencehouse/csh-auth/v2"
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 func main() {
 	pxy, err := proxy.GetProxy()
+	if err != nil {
+		logging.Logger.Fatalf("Failed to load proxy with error: %s", err)
+	}
+
+	if err := redis.InitRedis(); err != nil {
+		logging.Logger.Warnf("Failed to load redis client with error: %s, proceeding without", err)
+	}
+
+	if err := database.InitDatabase(); err != nil {
+		logging.Logger.Fatalf("Failed to load postgres database with error: %s", err)
+	}
 
 	hostUrl := os.Getenv("SERVER_HOST")
 	auth, err := csh_auth.Init(
@@ -27,14 +39,12 @@ func main() {
 		[]string{"profile", "email", "groups"},
 	)
 	if err != nil {
-		logging.Logger.WithFields(logrus.Fields{"error": err, "module": "main", "method": "main"}).Fatal("error initializing csh-auth")
+		logging.Logger.Fatalf("Failed to load csh-auth with error: %s", err)
 	}
 
 	router := gin.Default()
-	router.LoadHTMLGlob("templates/*")
-	router.Use(cors.Default())
 
-	secureCookie := strings.HasPrefix(os.Getenv("SERVER_HOST"), "https://")
+	secureCookie := strings.HasPrefix(hostUrl, "https://")
 
 	router.GET("/auth/login", func(ctx *gin.Context) {
 		if dest := ctx.Request.URL.Query().Get("referer"); proxy.IsSafePath(dest) {
@@ -46,23 +56,38 @@ func main() {
 
 	router.GET("/auth/callback", auth.HandleCallback)
 	router.GET("/auth/logout", auth.HandleLogout)
-
 	router.Use(auth.CookieMiddleware())
-	router.NoRoute(func(ctx *gin.Context) {
-		user, err := users.GetCSHAuth(ctx)
-		if err != nil {
-			ctx.Status(http.StatusUnauthorized)
-			return
-		}
 
-		if !users.IsFFF(user) {
-			ctx.HTML(http.StatusForbidden, "forbidden.tmpl", gin.H{
-				"User": user.Username,
-			})
-			return
-		}
+	LoadFrontend(router.Group(""))
+	routes.SetRoutes(router.Group(""))
 
-		pxy.ServeHTTP(ctx.Writer, ctx.Request)
-	})
+	if os.Getenv("DEV_MODE") == "true" {
+		logging.Logger.Info("RUNNING IN DEV MODE!")
+		router.NoRoute(createViteProxy())
+	} else {
+		router.NoRoute(func(ctx *gin.Context) {
+
+			user, err := users.GetCSHAuth(ctx)
+			if err != nil {
+				ctx.Status(http.StatusUnauthorized)
+				return
+			}
+
+			if !users.IsFFF(user) {
+				ctx.HTML(http.StatusForbidden, "forbidden.tmpl", gin.H{
+					"User": user.Username,
+				})
+				return
+			}
+
+			if strings.HasPrefix(ctx.Request.URL.Path, "/csh") {
+				ServeFrontend(ctx)
+				return
+			}
+
+			pxy.ServeHTTP(ctx.Writer, ctx.Request)
+		})
+	}
+
 	router.Run(":8080")
 }

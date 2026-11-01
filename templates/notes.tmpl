@@ -1,0 +1,28 @@
+{{define "notes.tmpl"}}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Notes</title>
+</head>
+<body>
+    <h1>Notes will be here</h1>
+    <br>
+    <p>trust</p>
+    <script type="module">
+        try {
+            const res = await fetch("/csh/api/v1/notes", {
+            method: "GET",
+            credentials: "include",
+            headers: { "Content-Type": "application/json"},
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        } catch (err) {
+            console.error("Error loading more:", err);
+        }
+    </script>
+</body>
+</html>
+
+{{end}}
