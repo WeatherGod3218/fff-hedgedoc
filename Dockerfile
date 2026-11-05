@@ -28,7 +28,7 @@ FROM alpine:latest
 
 WORKDIR /app
 COPY --from=gobuilder /app/server .
-COPY templates templates
+COPY web web
 
 EXPOSE 8080
 

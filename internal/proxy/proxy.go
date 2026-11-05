@@ -18,14 +18,18 @@ var old = []byte(`<ul class="nav masthead-nav">`)
 var inject = []byte(`
 <ul class="nav masthead-nav"> 
 <li class="ui-home">
-	<a href="/csh/notes">CSH</a> 
+	<a href="/csh">CSH</a> 
 </li>`)
 
-func IsSafePath(p string) bool { //had AI look over for bugs and it recommended this? alr
-	return strings.HasPrefix(p, "/") &&
-		!strings.HasPrefix(p, "//") &&
-		!strings.HasPrefix(p, "/\\") &&
-		!strings.HasPrefix(p, "/auth/")
+func IsSafePath(p string) bool {
+	if !strings.HasPrefix(p, "/") || strings.HasPrefix(p, "/auth/") {
+		return false
+	}
+	if strings.ContainsAny(p, "\\\t\r\n") {
+		return false
+	}
+	u, err := url.Parse(p)
+	return err == nil && u.Scheme == "" && u.Host == "" && !strings.HasPrefix(u.Path, "//")
 }
 
 func GetProxy() (*httputil.ReverseProxy, error) {

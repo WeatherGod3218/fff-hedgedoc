@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fff-hedgedoc/internal/database"
 	"fff-hedgedoc/internal/logging"
+	"fff-hedgedoc/internal/oidc"
 	"fff-hedgedoc/internal/proxy"
 	"fff-hedgedoc/internal/redis"
 	"fff-hedgedoc/internal/routes"
@@ -15,14 +17,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var OIDCClient oidc.OIDCClient = oidc.OIDCClient{}
+
 func main() {
+
 	pxy, err := proxy.GetProxy()
 	if err != nil {
 		logging.Logger.Fatalf("Failed to load proxy with error: %s", err)
 	}
 
 	if err := redis.InitRedis(); err != nil {
-		logging.Logger.Warnf("Failed to load redis client with error: %s, proceeding without", err)
+		logging.Logger.Fatalf("Failed to load redis client with error: %s, proceeding without", err)
 	}
 
 	if err := database.InitDatabase(); err != nil {
@@ -41,6 +46,43 @@ func main() {
 	if err != nil {
 		logging.Logger.Fatalf("Failed to load csh-auth with error: %s", err)
 	}
+	logging.Logger.Info("auth loaded correctly")
+
+	OIDCClient.SetupOIDCClient(os.Getenv("AUTH_OIDC_ID"), os.Getenv("AUTH_OIDC_SECRET"))
+	ctx := context.Background()
+
+	if err := OIDCClient.LoadAllGroups(ctx); err != nil {
+		logging.Logger.Fatalf("Failed to load grouos worker: %s", err)
+	}
+
+	if err := OIDCClient.LoadAllUsers(ctx); err != nil {
+		logging.Logger.Fatalf("Failed to load users worker: %s", err)
+	}
+
+	members, err := redis.GetUsersSection(ctx, "we", nil)
+	if err != nil {
+		logging.Logger.Fatalf("Failed to load csh-users section: %s", err)
+	}
+
+	for _, user := range members {
+		logging.Logger.Infof("User: %s, Id: %s", user.Username, user.UUID)
+	}
+	// usergroups, err := OIDCClient.LoadAllGroups()
+	// if err != nil {
+	// 	logging.Logger.Warnf("unable to load! %s", err)
+	// }
+
+	// for k, v := range usergroups {
+	// 	logging.Logger.Infof("Group! %s // %s", k, v)
+	// }
+
+	// results, err := redis.GetAllFromKeyPrefix(context.Background(), redis.GROUPS_KEY_PREFIX, 50)
+	// if err != nil {
+	// 	logging.Logger.Warnf("failed to load! %s", err)
+	// }
+	// for _, result := range results {
+	// 	logging.Logger.Infof("Group %s", result)
+	// }
 
 	router := gin.Default()
 
@@ -74,9 +116,7 @@ func main() {
 			}
 
 			if !users.IsFFF(user) {
-				ctx.HTML(http.StatusForbidden, "forbidden.tmpl", gin.H{
-					"User": user.Username,
-				})
+				ctx.Redirect(http.StatusForbidden, "/csh/forbidden/"+user.Username)
 				return
 			}
 
