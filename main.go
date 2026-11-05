@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fff-hedgedoc/internal/database"
 	"fff-hedgedoc/internal/logging"
 	"fff-hedgedoc/internal/oidc"
@@ -49,24 +48,24 @@ func main() {
 	logging.Logger.Info("auth loaded correctly")
 
 	OIDCClient.SetupOIDCClient(os.Getenv("AUTH_OIDC_ID"), os.Getenv("AUTH_OIDC_SECRET"))
-	ctx := context.Background()
+	// ctx := context.Background()
 
-	if err := OIDCClient.LoadAllGroups(ctx); err != nil {
-		logging.Logger.Fatalf("Failed to load grouos worker: %s", err)
-	}
+	// if err := OIDCClient.LoadAllGroups(ctx); err != nil {
+	// 	logging.Logger.Fatalf("Failed to load grouos worker: %s", err)
+	// }
 
-	if err := OIDCClient.LoadAllUsers(ctx); err != nil {
-		logging.Logger.Fatalf("Failed to load users worker: %s", err)
-	}
+	// if err := OIDCClient.LoadAllUsers(ctx); err != nil {
+	// 	logging.Logger.Fatalf("Failed to load users worker: %s", err)
+	// }
 
-	members, err := redis.GetUsersSection(ctx, "we", nil)
-	if err != nil {
-		logging.Logger.Fatalf("Failed to load csh-users section: %s", err)
-	}
+	// members, err := redis.GetUsersSection(ctx, "we", nil)
+	// if err != nil {
+	// 	logging.Logger.Fatalf("Failed to load csh-users section: %s", err)
+	// }
 
-	for _, user := range members {
-		logging.Logger.Infof("User: %s, Id: %s", user.Username, user.UUID)
-	}
+	// for _, user := range members {
+	// 	logging.Logger.Infof("User: %s, Id: %s", user.Username, user.UUID)
+	// }
 	// usergroups, err := OIDCClient.LoadAllGroups()
 	// if err != nil {
 	// 	logging.Logger.Warnf("unable to load! %s", err)
