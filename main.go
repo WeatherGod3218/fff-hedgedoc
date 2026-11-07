@@ -65,7 +65,7 @@ func main() {
 	}
 
 	for _, user := range members {
-		logging.Logger.Infof("User: %s, Id: %s", user.Username, user.UUID)
+		logging.Logger.Warnf("User: %s, Id: %s", user.Username, user.UUID)
 	}
 
 	results, err := redis.GetAllFromKeyPrefix(context.Background(), redis.GROUPS_KEY_PREFIX, 50)
