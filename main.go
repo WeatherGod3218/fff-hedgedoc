@@ -67,22 +67,14 @@ func main() {
 	for _, user := range members {
 		logging.Logger.Infof("User: %s, Id: %s", user.Username, user.UUID)
 	}
-	// usergroups, err := OIDCClient.LoadAllGroups()
-	// if err != nil {
-	// 	logging.Logger.Warnf("unable to load! %s", err)
-	// }
 
-	// for k, v := range usergroups {
-	// 	logging.Logger.Infof("Group! %s // %s", k, v)
-	// }
-
-	// results, err := redis.GetAllFromKeyPrefix(context.Background(), redis.GROUPS_KEY_PREFIX, 50)
-	// if err != nil {
-	// 	logging.Logger.Warnf("failed to load! %s", err)
-	// }
-	// for _, result := range results {
-	// 	logging.Logger.Infof("Group %s", result)
-	// }
+	results, err := redis.GetAllFromKeyPrefix(context.Background(), redis.GROUPS_KEY_PREFIX, 50)
+	if err != nil {
+		logging.Logger.Warnf("failed to load! %s", err)
+	}
+	for _, result := range results {
+		logging.Logger.Infof("Group %s", result)
+	}
 
 	router := gin.Default()
 
