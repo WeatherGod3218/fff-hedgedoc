@@ -7,7 +7,7 @@ type userInfo = {
 }
 
 async function fetchUserInfo() {
-  const res = await fetch('/csh/api/v1/user');
+  const res = await fetch('/csh/api/v1/users/info');
   if (!res.ok) throw new Error('Network response error');
   return res.json();
 }
@@ -39,6 +39,9 @@ export function Navbar() {
             </li>
             <li className="nav-item">
                 <a href="/csh/admin" className="nav-link px-2 py-0 link-light">Admin</a>
+            </li>
+            <li className="nav-item">
+                <a href="/csh/config/test_note" className="nav-link px-2 py-0 link-light">Config</a>
             </li>
             </ul>
             <div className="bd-theme dropdown ms-auto">
@@ -81,7 +84,7 @@ export function Navbar() {
                     width="32"
                     height="32"
                     className="rounded-circle"
-                    />
+                />
                 </a>
                 <ul className="dropdown-menu dropdown-menu-end text-small">
                     <li><a className="dropdown-item" href="/new">New Note</a></li>

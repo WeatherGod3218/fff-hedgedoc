@@ -1,3 +1,15 @@
 @import 'bootstrap';
 @import 'csh-material-bootstrap/css';
 @import 'bootstrap-icons/font/bootstrap-icons.css';
+
+.btn-select-list:hover {
+  background-color: #004c99;
+}
+
+.select-list-approved {
+    color: rgb(0, 255, 0);
+}
+
+.select-list-denied {
+    color: rgb(255, 0, 0);
+}

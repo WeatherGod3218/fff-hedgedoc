@@ -15,8 +15,6 @@ import (
 var client *redis.Client
 var RedisInitialized bool = false
 
-const GROUPS_KEY_PREFIX = "csh:groups:"
-
 func InitRedis() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -55,6 +53,7 @@ func GetAllFromKeyPrefix(ctx context.Context, prefix string, maxSize int) (map[s
 	} else {
 		fullResults = int(maxSize)
 	}
+
 	for {
 		keys, next, err := client.Scan(ctx, cursor, pattern, 500).Result()
 		if err != nil {

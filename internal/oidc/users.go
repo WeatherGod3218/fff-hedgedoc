@@ -20,7 +20,7 @@ func (client *OIDCClient) GetEBoardMembers(ctx context.Context) []models.Keycloa
 }
 
 func (c *OIDCClient) LoadAllUsers(ctx context.Context) error {
-	logging.Logger.Info("Starting Reload of All Users!")
+	logging.Logger.Warn("Starting Reload of All Users!")
 	const pageSize = 250
 
 	for first := 0; ; first += pageSize {
@@ -41,7 +41,7 @@ func (c *OIDCClient) LoadAllUsers(ctx context.Context) error {
 			break
 		}
 	}
-	logging.Logger.Info("Finished Reload of All Users Successfully!")
+	logging.Logger.Warn("Finished Reload of All Users Successfully!")
 
 	return nil
 }

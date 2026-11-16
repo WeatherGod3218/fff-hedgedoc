@@ -12,6 +12,7 @@ import { ForbiddenPage } from './pages/Forbidden.tsx';
 import { NotFoundPage } from './pages/NotFound.tsx';
 import { HomePage } from './pages/Home.tsx';
 import { AdminPage } from './pages/Admin.tsx';
+import { AccessConfigPage } from './pages/AccessConfig.tsx';
 const queryClient = new QueryClient();
 
 createRoot(document.getElementById('root')!).render(
@@ -22,6 +23,7 @@ createRoot(document.getElementById('root')!).render(
 						<Route index element={<HomePage />}/>
 						<Route path="/notes" element={<NotesPage/>}/>
 						<Route path="/admin" element={<AdminPage/>}/>
+						<Route path="/config/:note" element={<AccessConfigPage/>}/>
 						<Route path="/forbidden/:user" element={<ForbiddenPage/>}/>								
 						<Route path="*" element={<NotFoundPage/>}/>
 				</Routes>

@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"fff-hedgedoc/internal/models"
+	"strings"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -32,8 +33,10 @@ func AddUser(ctx context.Context, uuid string, username string) error {
 
 func GetUsersSection(ctx context.Context, prefix string, cursor *string) ([]models.UserInfo, error) {
 	lo := "[" + prefix
-	if cursor != nil {
-		lo = "(" + *cursor
+	if cursor != nil && strings.TrimSpace(*cursor) != "" {
+		if *cursor >= prefix {
+			lo = "(" + *cursor
+		}
 	}
 	hi := "[" + prefix + "\xff"
 

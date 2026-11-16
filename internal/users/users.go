@@ -57,7 +57,7 @@ func IsFFF(user *csh_auth.UserInfo) bool {
 		return true
 
 	default:
-		return true //temp
+		return false //temp
 	}
 }
 

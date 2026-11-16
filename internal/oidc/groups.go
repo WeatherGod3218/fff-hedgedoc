@@ -61,7 +61,7 @@ func (client *OIDCClient) GetOIDCGroup(ctx context.Context, groupID string) []mo
 }
 
 func (client *OIDCClient) LoadAllGroups(ctx context.Context) error {
-	logging.Logger.Info("Starting Reload of All Groups!")
+	logging.Logger.Warn("Starting Reload of All Groups!")
 
 	var top []models.KeycloakGroup
 
@@ -70,7 +70,14 @@ func (client *OIDCClient) LoadAllGroups(ctx context.Context) error {
 	}
 
 	client.collect(ctx, top)
-	logging.Logger.Info("Finished Reload of All Groups Successfully!")
+
+	for _, group := range top {
+		if err := redis.AddGroup(ctx, group.ID, group.Name); err != nil {
+			return err
+		}
+	}
+
+	logging.Logger.Warn("Finished Reload of All Groups Successfully!")
 
 	return nil
 }

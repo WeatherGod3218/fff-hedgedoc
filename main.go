@@ -10,6 +10,8 @@ import (
 	"fff-hedgedoc/internal/routes"
 	"fff-hedgedoc/internal/users"
 	"net/http"
+
+	// "fff-hedgedoc/internal/routes"
 	"os"
 	"strings"
 
@@ -27,7 +29,11 @@ func main() {
 	}
 
 	if err := redis.InitRedis(); err != nil {
-		logging.Logger.Fatalf("Failed to load redis client with error: %s, proceeding without", err)
+		if os.Getenv("DEV_MODE") == "true" {
+			logging.Logger.Warnf("Failed to load redis in dev mode, proceeding without: %s", err)
+		} else {
+			logging.Logger.Fatalf("Failed to load redis client with error: %s", err)
+		}
 	}
 
 	if err := database.InitDatabase(); err != nil {
@@ -51,29 +57,14 @@ func main() {
 	OIDCClient.SetupOIDCClient(os.Getenv("AUTH_OIDC_ID"), os.Getenv("AUTH_OIDC_SECRET"))
 	ctx := context.Background()
 
-	if err := OIDCClient.LoadAllGroups(ctx); err != nil {
-		logging.Logger.Fatalf("Failed to load grouos worker: %s", err)
-	}
+	if os.Getenv("DEV_MODE") != "true" {
+		if err := OIDCClient.LoadAllGroups(ctx); err != nil {
+			logging.Logger.Fatalf("Failed to load grouos worker: %s", err)
+		}
 
-	if err := OIDCClient.LoadAllUsers(ctx); err != nil {
-		logging.Logger.Fatalf("Failed to load users worker: %s", err)
-	}
-
-	members, err := redis.GetUsersSection(ctx, "we", nil)
-	if err != nil {
-		logging.Logger.Fatalf("Failed to load csh-users section: %s", err)
-	}
-
-	for _, user := range members {
-		logging.Logger.Warnf("User: %s, Id: %s", user.Username, user.UUID)
-	}
-
-	results, err := redis.GetAllFromKeyPrefix(context.Background(), redis.GROUPS_KEY_PREFIX, 50)
-	if err != nil {
-		logging.Logger.Warnf("failed to load! %s", err)
-	}
-	for _, result := range results {
-		logging.Logger.Infof("Group %s", result)
+		if err := OIDCClient.LoadAllUsers(ctx); err != nil {
+			logging.Logger.Fatalf("Failed to load users worker: %s", err)
+		}
 	}
 
 	router := gin.Default()
