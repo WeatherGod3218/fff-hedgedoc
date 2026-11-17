@@ -9,8 +9,11 @@ type SelectListBlockProps = {
 }
 
 export function SelectListBlock(props: SelectListBlockProps) {
+
     return (
-        <button type="button" className="btn btn-select-list border-0 border-bottom w-100 py-3 pb-3 d-flex align-items-center gap-2" onClick={() => {props.onClick && props.onClick(props.Name, props.UUID, props.Selected)}}>
+        <button type="button" className="btn btn-select-list border-0 border-bottom w-100 py-3 pb-3 d-flex align-items-center gap-2" onClick={() => {
+            props.onClick && props.onClick(props.Name, props.UUID, props.Selected)
+            }}>
             {props.Icon && (
                 <img
                     src={`https://profiles.csh.rit.edu/image/${props.Name}`}
