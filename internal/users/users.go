@@ -45,22 +45,6 @@ func IsEli(user *csh_auth.UserInfo) bool {
 	return user.Uuid == "b94eee56-a24b-11f0-850c-62123a302540"
 }
 
-func IsFFF(user *csh_auth.UserInfo) bool {
-	switch user.Uuid {
-	case "b94eee56-a24b-11f0-850c-62123a302540": //me!
-		return true
-	case "ba5cbf3a-aa5b-11f1-8fbd-62123a302540": //kitty
-		return true
-	case "c1c212aa-c056-11f1-b913-62123a302540": //integer
-		return true
-	case "52dc9ed8-8c4e-11f0-9939-62123a302540": //paradox
-		return true
-
-	default:
-		return false //temp
-	}
-}
-
 func GetCSHAuth(c *gin.Context) (*csh_auth.UserInfo, error) {
 	userAny, exists := c.Get("cshauth")
 

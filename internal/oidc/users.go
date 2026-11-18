@@ -21,20 +21,18 @@ func (client *OIDCClient) GetEBoardMembers(ctx context.Context) []models.Keycloa
 
 func (c *OIDCClient) LoadAllUsers(ctx context.Context) error {
 	logging.Logger.Warn("Starting Reload of All Users!")
-	const pageSize = 250
+	const pageSize = 400
 
 	for first := 0; ; first += pageSize {
 		var page []models.KeycloakUser
 		path := fmt.Sprintf("/users?briefRepresentation=true&first=%d&max=%d", first, pageSize)
 		if err := c.get(ctx, path, &page); err != nil {
 			logging.Logger.WithFields(logrus.Fields{"method": "LoadAllUsers"}).Error(err)
-			return nil
+			return err
 		}
 
-		for _, user := range page {
-			if err := redis.AddUser(ctx, user.ID, user.Username); err != nil {
-				return err
-			}
+		if err := redis.AddUsers(ctx, page); err != nil {
+			return err
 		}
 
 		if len(page) < pageSize {
@@ -47,7 +45,7 @@ func (c *OIDCClient) LoadAllUsers(ctx context.Context) error {
 }
 
 func ReloadUsersWorker(ctx context.Context, client *OIDCClient) {
-	ticker := time.NewTicker(time.Hour)
+	ticker := time.NewTicker(6 * time.Hour)
 
 	go func() {
 		for {
@@ -56,7 +54,7 @@ func ReloadUsersWorker(ctx context.Context, client *OIDCClient) {
 				if err := client.LoadAllUsers(context.Background()); err != nil {
 					logging.Logger.Warnf("FAILED TO RELOAD THE USERS FROM OIDC!: %s", err)
 				}
-				ticker.Reset(time.Hour)
+				ticker.Reset(6 * time.Hour)
 			case <-client.quit:
 				ticker.Stop()
 				return

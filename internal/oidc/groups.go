@@ -6,24 +6,36 @@ import (
 	"fff-hedgedoc/internal/models"
 	"fff-hedgedoc/internal/redis"
 	"fmt"
+	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/sirupsen/logrus"
 )
 
-func (client *OIDCClient) collect(ctx context.Context, groups []models.KeycloakGroup) {
+func (client *OIDCClient) collect(ctx context.Context, groups []models.KeycloakGroup) error {
 	for _, g := range groups {
 		redis.SetKeyValueStore(context.Background(), redis.GROUPS_KEY_PREFIX+g.ID, g.Name, -1)
 
 		subs := g.SubGroups
 		if len(subs) == 0 && g.SubGroupCount > 0 {
 			if err := client.get(ctx, "/groups/"+g.ID+"/children?max=1000", &subs); err != nil {
-				logging.Logger.Error(err)
-				continue
+				return err
 			}
 		}
-		client.collect(ctx, subs)
+
+		if err := client.collect(ctx, subs); err != nil {
+			return err
+		}
+
+		for _, group := range subs {
+			if err := redis.AddGroup(ctx, group.ID, group.Name); err != nil {
+				return err
+			}
+		}
 	}
+
+	return nil
 }
 
 func (client *OIDCClient) FindOIDCGroupID(ctx context.Context, name string) string {
@@ -60,6 +72,32 @@ func (client *OIDCClient) GetOIDCGroup(ctx context.Context, groupID string) []mo
 	return ret
 }
 
+func (client *OIDCClient) LoadMembersFromGroup(ctx context.Context, groupID string, groupName string) ([]models.KeycloakUser, error) {
+	const pageSize = 100
+	var members []models.KeycloakUser
+
+	for first := 0; ; first += pageSize {
+		q := url.Values{}
+		q.Set("first", strconv.Itoa(first)) //ts exists??
+		q.Set("max", strconv.Itoa(pageSize))
+		q.Set("briefRepresentation", "true")
+
+		uri := fmt.Sprintf("/groups/%s/members?%s", url.PathEscape(groupID), q.Encode())
+
+		var page []models.KeycloakUser
+		if err := client.get(ctx, uri, &page); err != nil {
+			return nil, err
+		}
+		members = append(members, page...)
+
+		if len(page) < pageSize {
+			break
+		}
+	}
+
+	return members, nil
+}
+
 func (client *OIDCClient) LoadAllGroups(ctx context.Context) error {
 	logging.Logger.Warn("Starting Reload of All Groups!")
 
@@ -69,9 +107,22 @@ func (client *OIDCClient) LoadAllGroups(ctx context.Context) error {
 		return err
 	}
 
-	client.collect(ctx, top)
+	if err := client.collect(ctx, top); err != nil {
+		logging.Logger.Warnf("Failed to load User groups! %s", err)
+		return err
+	}
 
 	for _, group := range top {
+		members, err := client.LoadMembersFromGroup(ctx, group.ID, group.Name)
+		if err != nil {
+			logging.Logger.Warnf("Failure loading members from group %s, with error %s", group.ID, err)
+			return err
+		}
+
+		if err := redis.AddMembersOfGroup(ctx, group.ID, members); err != nil {
+			return err
+		}
+
 		if err := redis.AddGroup(ctx, group.ID, group.Name); err != nil {
 			return err
 		}
@@ -83,7 +134,7 @@ func (client *OIDCClient) LoadAllGroups(ctx context.Context) error {
 }
 
 func ReloadGroupsWorker(ctx context.Context, client *OIDCClient) {
-	ticker := time.NewTicker(time.Hour + (time.Minute * 30)) //add 30 minutes to offset from the user
+	ticker := time.NewTicker(3 * time.Hour) //add 30 minutes to offset from the user
 
 	go func() {
 		for {
@@ -92,7 +143,7 @@ func ReloadGroupsWorker(ctx context.Context, client *OIDCClient) {
 				if err := client.LoadAllGroups(context.Background()); err != nil {
 					logging.Logger.Warnf("FAILED TO RELOAD THE GROUPS FROM OIDC!: %s", err)
 				}
-				ticker.Reset(time.Hour)
+				ticker.Reset(6 * time.Hour)
 			case <-client.quit:
 				ticker.Stop()
 				return

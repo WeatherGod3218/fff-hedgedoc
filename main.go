@@ -10,6 +10,7 @@ import (
 	"fff-hedgedoc/internal/routes"
 	"fff-hedgedoc/internal/users"
 	"net/http"
+	"sync"
 
 	// "fff-hedgedoc/internal/routes"
 	"os"
@@ -58,13 +59,31 @@ func main() {
 	ctx := context.Background()
 
 	if os.Getenv("DEV_MODE") != "true" {
-		if err := OIDCClient.LoadAllGroups(ctx); err != nil {
-			logging.Logger.Fatalf("Failed to load grouos worker: %s", err)
-		}
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
 
-		if err := OIDCClient.LoadAllUsers(ctx); err != nil {
-			logging.Logger.Fatalf("Failed to load users worker: %s", err)
-		}
+			if err := OIDCClient.LoadAllGroups(ctx); err != nil {
+				logging.Logger.Fatalf("Failed to load grouos worker: %s", err)
+			}
+
+			oidc.ReloadGroupsWorker(ctx, &OIDCClient)
+
+		}()
+
+		go func() {
+			defer wg.Done()
+
+			if err := OIDCClient.LoadAllUsers(ctx); err != nil {
+				logging.Logger.Fatalf("Failed to load users worker: %s", err)
+			}
+
+			oidc.ReloadUsersWorker(ctx, &OIDCClient)
+
+		}()
+
+		wg.Wait()
 	}
 
 	router := gin.Default()
@@ -92,14 +111,9 @@ func main() {
 	} else {
 		router.NoRoute(func(ctx *gin.Context) {
 
-			user, err := users.GetCSHAuth(ctx)
+			_, err := users.GetCSHAuth(ctx)
 			if err != nil {
 				ctx.Status(http.StatusUnauthorized)
-				return
-			}
-
-			if !users.IsFFF(user) {
-				ctx.Redirect(http.StatusForbidden, "/csh/forbidden/"+user.Username)
 				return
 			}
 

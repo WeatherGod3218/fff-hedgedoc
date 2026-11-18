@@ -9,11 +9,27 @@ import (
 )
 
 const GROUPS_KEY_PREFIX = "csh:groups"
-const GROUP_LIST_KEY_PREFIX = GROUPS_KEY_PREFIX + ":list"
 
+const GROUP_LIST_KEY_PREFIX = GROUPS_KEY_PREFIX + ":list"
 const GROUPNAME_TO_ID_KEY = GROUPS_KEY_PREFIX + ":grouptoid:"
+const GROUP_MEMBERS_PREFIX = GROUPS_KEY_PREFIX + ":members"
 
 const MAX_GROUPS_PER_REQ = 50
+
+func AddMembersOfGroup(ctx context.Context, groupID string, users []models.KeycloakUser) error {
+	if len(users) == 0 {
+		return nil
+	}
+
+	pipe := client.Pipeline()
+
+	for _, user := range users {
+		pipe.Set(ctx, GROUP_MEMBERS_PREFIX+groupID+user.Username, user.ID, 0)
+	}
+
+	_, err := pipe.Exec(ctx)
+	return err
+}
 
 func AddGroup(ctx context.Context, uuid string, groupName string) error {
 	_, err := client.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
@@ -34,7 +50,7 @@ func AddGroup(ctx context.Context, uuid string, groupName string) error {
 func GetGroupsSection(ctx context.Context, prefix string, cursor *string) ([]models.GroupInfo, error) {
 	lo := "[" + prefix
 	if cursor != nil && strings.TrimSpace(*cursor) != "" {
-		if *cursor >= prefix {
+		if strings.HasPrefix(*cursor, prefix) {
 			lo = "(" + *cursor
 		}
 	}
@@ -49,6 +65,10 @@ func GetGroupsSection(ctx context.Context, prefix string, cursor *string) ([]mod
 	}).Result()
 	if err != nil {
 		return nil, err
+	}
+
+	if len(groupnames) == 0 {
+		return []models.GroupInfo{}, nil
 	}
 
 	keys := make([]string, len(groupnames))

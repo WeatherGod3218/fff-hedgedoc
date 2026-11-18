@@ -7,17 +7,18 @@ import (
 	"fff-hedgedoc/internal/redis"
 	"fff-hedgedoc/internal/users"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
 func GetUsers(c *gin.Context) {
-	// _, err := users.GetCSHAuth(c)
-	// if err != nil {
-	// 	c.Status(http.StatusUnauthorized)
-	// 	return
-	// }
+	_, err := users.GetCSHAuth(c)
+	if err != nil {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
 
 	var req models.GetUsersInput
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -28,6 +29,12 @@ func GetUsers(c *gin.Context) {
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), time.Second*10)
 	defer cancel()
+
+	if os.Getenv("DEV_MODE") == "true" {
+		users := GetUsersDevData()
+		c.JSON(http.StatusOK, users)
+		return
+	}
 
 	redis_users, err := redis.GetUsersSection(ctx, req.Prefix, req.Cursor)
 	if err != nil {
@@ -46,7 +53,7 @@ func GetUsers(c *gin.Context) {
 	}
 
 	cursor := ""
-	if len(users) > 0 {
+	if len(users) > 1 {
 		cursor = users[len(users)-1].Username
 	}
 

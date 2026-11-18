@@ -94,6 +94,8 @@ func (client *OIDCClient) GetAccessToken() int {
 }
 
 func (c *OIDCClient) get(ctx context.Context, path string, out any) error {
+	start := time.Now()
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		c.providerBase+"/auth/admin/realms/csh"+path, nil)
 	if err != nil {
@@ -111,5 +113,10 @@ func (c *OIDCClient) get(ctx context.Context, path string, out any) error {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		return fmt.Errorf("status %d: %s", resp.StatusCode, bytes.TrimSpace(body))
 	}
+
+	end := time.Since(start)
+
+	logging.Logger.Infof("Latest OIDC to %s request took %f seconds", path, end.Seconds())
+
 	return json.NewDecoder(resp.Body).Decode(out)
 }

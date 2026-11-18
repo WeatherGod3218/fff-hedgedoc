@@ -7,17 +7,18 @@ import (
 	"fff-hedgedoc/internal/redis"
 	"fff-hedgedoc/internal/users"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
 func GetGroups(c *gin.Context) {
-	// _, err := users.GetCSHAuth(c)
-	// if err != nil {
-	// 	c.Status(http.StatusUnauthorized)
-	// 	return
-	// }
+	_, err := users.GetCSHAuth(c)
+	if err != nil {
+		c.Status(http.StatusUnauthorized)
+		return
+	}
 
 	var req models.GetGroupsInput
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -28,6 +29,12 @@ func GetGroups(c *gin.Context) {
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), time.Second*10)
 	defer cancel()
+
+	if os.Getenv("DEV_MODE") == "true" {
+		groups := GetGroupDevData()
+		c.JSON(http.StatusOK, groups)
+		return
+	}
 
 	redis_groups, err := redis.GetGroupsSection(ctx, req.Prefix, req.Cursor)
 	if err != nil {
@@ -46,27 +53,13 @@ func GetGroups(c *gin.Context) {
 	}
 
 	cursor := ""
-	if len(groups) > 0 {
+	if len(groups) > 1 {
 		cursor = groups[len(groups)-1].GroupName
 	}
 
 	c.JSON(http.StatusOK, models.GetGroupsOutput{
 		Groups: groups,
 		Cursor: cursor,
-	})
-}
-
-func GetUserInfo(c *gin.Context) {
-	user, err := users.GetCSHAuth(c)
-	if err != nil {
-		c.Status(http.StatusUnauthorized)
-		return
-	}
-
-	c.JSON(http.StatusOK, models.UserInfo{
-		UUID:     user.Uuid,
-		Username: user.Username,
-		FullName: user.FullName,
 	})
 }
 

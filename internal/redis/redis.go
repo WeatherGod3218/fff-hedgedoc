@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fff-hedgedoc/internal/logging"
 	"fmt"
+	"math"
 	"os"
 	"time"
 
@@ -49,9 +50,9 @@ func GetAllFromKeyPrefix(ctx context.Context, prefix string, maxSize int) (map[s
 	)
 
 	if maxSize == -1 {
-		fullResults = 99999999
+		fullResults = math.MaxInt
 	} else {
-		fullResults = int(maxSize)
+		fullResults = maxSize
 	}
 
 	for {

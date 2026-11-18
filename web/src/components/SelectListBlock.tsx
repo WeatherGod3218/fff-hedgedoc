@@ -1,8 +1,10 @@
 import { Check, X } from "lucide-react"
 
+
 type SelectListBlockProps = {
     Name: string,
     UUID: string,
+    Type: string,
     Selected: boolean,
     onClick?: (name: string, uuid: string, selected: boolean) => void,
     Icon?: boolean
@@ -26,7 +28,7 @@ export function SelectListBlock(props: SelectListBlockProps) {
             <h3 className="mb-0">{props.Name}</h3>
             
             <h3 className={`mb-0 ms-auto align-items-center ${props.Selected ? "select-list-approved" : "select-list-denied"}`}>
-                {props.Selected ? <>Approved<Check className="mx-1" size={26}/></>  : <>Denied<X className="mx-1" size={30}/></>}
+                {props.Selected ? <>Approved<Check className="mx-1" size={26}/></>  : <>Denied<X className="mx-1" size={26}/></>}
             </h3>
         </button>
     )

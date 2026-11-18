@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fff-hedgedoc/internal/routes/api/v1/access"
 	"fff-hedgedoc/internal/routes/api/v1/groups"
 	"fff-hedgedoc/internal/routes/api/v1/notes"
 	"fff-hedgedoc/internal/routes/api/v1/users"
@@ -13,4 +14,5 @@ func SetRoutes(r *gin.RouterGroup) {
 	notes.SetRoutes(v1R)
 	users.SetRoutes(v1R)
 	groups.SetRoutes(v1R)
+	access.SetRoutes(v1R)
 }
