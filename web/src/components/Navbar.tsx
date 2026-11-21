@@ -12,12 +12,13 @@ async function fetchUserInfo() {
   return res.json();
 }
 
+
 export function Navbar() {
     const { data } = useQuery<userInfo>({
         queryKey: ['userInfo'], 
         queryFn: fetchUserInfo,
     });
-    
+
     return (
     <nav className="navbar navbar-expand-lg bg-primary sticky-top shadow-sm" data-bs-theme="dark">
         <div className="container-lg">
@@ -87,9 +88,11 @@ export function Navbar() {
                 />
                 </a>
                 <ul className="dropdown-menu dropdown-menu-end text-small">
-                    <li><a className="dropdown-item" href="/new">New Note</a></li>
-                    <li><a className="dropdown-item" href={data ? "http://profiles.csh.rit.edu/user/" + data.username : "http://profiles.csh.rit.edu"}>Profile</a></li>
+                    <li><a className="dropdown-item" href="/features">Features</a></li>
+                    <li><a className="dropdown-item" href="/me/export">Export User Data</a></li>
+                    <li><a className="dropdown-item" href="/history">Export History</a></li>
                     <li><hr className="dropdown-divider" /></li>
+                    <li><a className="dropdown-item" href={data ? "http://profiles.csh.rit.edu/user/" + data.username : "http://profiles.csh.rit.edu"}>Profile</a></li>
                     <li><a className="dropdown-item" href="/auth/logout">Sign out</a></li>
                 </ul>
                 </div>
